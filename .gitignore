@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Dev script artifacts
+.pids/
+.logs/
+
+# Generated meshes
+backend/outputs/
+frontend/outputs/
+
+# Model weights (large files - run setup_triposr.sh to download)
+backend/triposr/
+*.ckpt
+*.pth
+*.pt
+*.bin
+*.safetensors
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/
+*.cache
+.pytest_cache/
+.ruff_cache/
+.uv/
+
+# uv
+uv.lock
+
+# TypeScript
+*.tsbuildinfo

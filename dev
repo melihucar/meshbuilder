@@ -1,0 +1,160 @@
+#!/bin/bash
+
+# Mesh Builder Development Script
+# Usage: ./dev start | stop | status | logs
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PID_DIR="$SCRIPT_DIR/.pids"
+LOG_DIR="$SCRIPT_DIR/.logs"
+
+mkdir -p "$PID_DIR" "$LOG_DIR"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+start_backend() {
+    if [ -f "$PID_DIR/backend.pid" ] && kill -0 "$(cat "$PID_DIR/backend.pid")" 2>/dev/null; then
+        echo -e "${YELLOW}Backend already running${NC}"
+        return
+    fi
+
+    echo -e "${BLUE}Starting backend...${NC}"
+    cd "$SCRIPT_DIR/backend"
+    uv run python main.py > "$LOG_DIR/backend.log" 2>&1 &
+    echo $! > "$PID_DIR/backend.pid"
+    cd "$SCRIPT_DIR"
+
+    # Wait for backend to be ready
+    for i in {1..30}; do
+        if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+            echo -e "${GREEN}Backend running at http://localhost:8000${NC}"
+            return
+        fi
+        sleep 0.5
+    done
+    echo -e "${YELLOW}Backend started (may still be loading model)${NC}"
+}
+
+start_frontend() {
+    if [ -f "$PID_DIR/frontend.pid" ] && kill -0 "$(cat "$PID_DIR/frontend.pid")" 2>/dev/null; then
+        echo -e "${YELLOW}Frontend already running${NC}"
+        return
+    fi
+
+    echo -e "${BLUE}Starting frontend...${NC}"
+    cd "$SCRIPT_DIR/frontend"
+    npm run dev > "$LOG_DIR/frontend.log" 2>&1 &
+    echo $! > "$PID_DIR/frontend.pid"
+    cd "$SCRIPT_DIR"
+
+    sleep 2
+    echo -e "${GREEN}Frontend running at http://localhost:5173${NC}"
+}
+
+stop_service() {
+    local name=$1
+    local pid_file="$PID_DIR/$name.pid"
+
+    if [ -f "$pid_file" ]; then
+        local pid=$(cat "$pid_file")
+        if kill -0 "$pid" 2>/dev/null; then
+            echo -e "${BLUE}Stopping $name (PID: $pid)...${NC}"
+            kill "$pid" 2>/dev/null || true
+
+            # Wait for process to stop
+            for i in {1..10}; do
+                if ! kill -0 "$pid" 2>/dev/null; then
+                    break
+                fi
+                sleep 0.5
+            done
+
+            # Force kill if still running
+            if kill -0 "$pid" 2>/dev/null; then
+                kill -9 "$pid" 2>/dev/null || true
+            fi
+
+            echo -e "${GREEN}$name stopped${NC}"
+        fi
+        rm -f "$pid_file"
+    fi
+}
+
+check_status() {
+    local name=$1
+    local pid_file="$PID_DIR/$name.pid"
+    local port=$2
+
+    if [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
+        echo -e "${GREEN}●${NC} $name is running (PID: $(cat "$pid_file"), port: $port)"
+    else
+        echo -e "${RED}○${NC} $name is not running"
+        rm -f "$pid_file" 2>/dev/null
+    fi
+}
+
+case "${1:-}" in
+    start)
+        echo -e "${BLUE}🚀 Starting Mesh Builder...${NC}"
+        echo ""
+        start_backend
+        start_frontend
+        echo ""
+        echo -e "${GREEN}Ready!${NC} Open ${BLUE}http://localhost:5173${NC} in your browser"
+        echo "Run ${YELLOW}./dev logs${NC} to see output"
+        echo "Run ${YELLOW}./dev stop${NC} to stop servers"
+        ;;
+
+    stop)
+        echo -e "${BLUE}Stopping Mesh Builder...${NC}"
+        stop_service "frontend"
+        stop_service "backend"
+        echo -e "${GREEN}All services stopped${NC}"
+        ;;
+
+    restart)
+        $0 stop
+        sleep 1
+        $0 start
+        ;;
+
+    status)
+        echo -e "${BLUE}Mesh Builder Status${NC}"
+        echo ""
+        check_status "backend" "8000"
+        check_status "frontend" "5173"
+        ;;
+
+    logs)
+        case "${2:-all}" in
+            backend)
+                tail -f "$LOG_DIR/backend.log"
+                ;;
+            frontend)
+                tail -f "$LOG_DIR/frontend.log"
+                ;;
+            *)
+                tail -f "$LOG_DIR/backend.log" "$LOG_DIR/frontend.log"
+                ;;
+        esac
+        ;;
+
+    *)
+        echo "Mesh Builder Development Script"
+        echo ""
+        echo "Usage: ./dev <command>"
+        echo ""
+        echo "Commands:"
+        echo "  start     Start backend and frontend servers"
+        echo "  stop      Stop all servers"
+        echo "  restart   Restart all servers"
+        echo "  status    Show server status"
+        echo "  logs      Tail logs (./dev logs [backend|frontend])"
+        ;;
+esac

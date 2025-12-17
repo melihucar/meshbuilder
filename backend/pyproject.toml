@@ -1,0 +1,55 @@
+[project]
+name = "mesh-builder"
+version = "1.0.0"
+description = "Generate 3D meshes from images using AI"
+requires-python = ">=3.10"
+dependencies = [
+    # Web Framework
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "python-multipart>=0.0.6",
+
+    # ML & 3D Processing
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "transformers>=4.35.0",
+    "accelerate>=0.25.0",
+    "huggingface-hub>=0.20.0",
+    "diffusers>=0.25.0",
+    "scipy>=1.11.0",
+
+    # Image Processing
+    "Pillow>=10.0.0",
+    "numpy>=1.24.0",
+    "rembg>=2.0.50",
+    "onnxruntime>=1.16.0",
+
+    # TripoSR dependencies
+    "einops>=0.7.0",
+    "omegaconf>=2.3.0",
+    "pytorch-lightning>=2.0.0",
+    "imageio>=2.31.0",
+    "imageio-ffmpeg>=0.4.8",
+    "PyMCubes>=0.1.4",
+
+    # 3D Mesh Processing
+    "trimesh>=4.0.0",
+    "pygltflib>=1.16.0",
+    "networkx>=3.0",
+    "open3d>=0.18.0",
+
+    # Utilities
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "ruff>=0.1.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "ruff>=0.1.0",
+]
